@@ -47,7 +47,7 @@ CImageProcessingDoc::~CImageProcessingDoc()
 		delete m_pImage;
 }
 
-BOOL CImageProcessingDoc::OnOpenDocument(LPCTSTR lpszPathName) 
+BOOL CImageProcessingDoc::OnOpenDocument(LPCTSTR lpszPathName)
 {
 	if (!CDocument::OnOpenDocument(lpszPathName))
 		return FALSE;
@@ -143,8 +143,8 @@ void CImageProcessingDoc::CalculateHistogram()
 		// Histogram function, which is implemented in Cximage
 		 //m_histogramMax = m_pImage->Histogram(m_histogramRed, m_histogramGreen, m_histogramBlue, m_histogramGray);
 
-		 
-		// °¡Â¥ÄÚµå
+
+		// ï¿½ï¿½Â¥ï¿½Úµï¿½
 		for (int i = 0; i < 256; i++){
 			m_histogramRed[i]   = rand() % 200;
 			m_histogramGreen[i] = rand() % 200;
@@ -170,9 +170,6 @@ void CImageProcessingDoc::OnProcessBrightness()
 		DlgBrightnessOption dlg;
 
 		if (dlg.DoModal() == IDOK) {
-			// write your own code
-			// for applying your effect, you must use m_pImage
-			// this code is a simple example for manufacturing image : grayscaling
 
 			int nPlusMinus = dlg.m_nPlusMinus;
 			BYTE byModifyValue = dlg.m_byModifyValue;
@@ -186,23 +183,14 @@ void CImageProcessingDoc::OnProcessBrightness()
 				for (DWORD x = 0; x < width; x++) {
 					color = m_pImage->GetPixelColor(x, y);
 
-					newcolor.rgbBlue  = (BYTE)RGB2GRAY(color.rgbRed, color.rgbGreen, color.rgbBlue);
-					newcolor.rgbGreen = (BYTE)RGB2GRAY(color.rgbRed, color.rgbGreen, color.rgbBlue);
-					newcolor.rgbRed   = (BYTE)RGB2GRAY(color.rgbRed, color.rgbGreen, color.rgbBlue);
+					const int modify = byModifyValue * (nPlusMinus == 0 ? 1 : -1);
+					newcolor.rgbRed   = (BYTE)max(0, min(255, (int)color.rgbRed   + modify));
+					newcolor.rgbGreen = (BYTE)max(0, min(255, (int)color.rgbGreen + modify));
+					newcolor.rgbBlue  = (BYTE)max(0, min(255, (int)color.rgbBlue  + modify));
 
 					m_pImage->SetPixelColor(x, y, newcolor);
 				}
 			}
-
-			// code to view overflow, Keep observation with the debugger
-			BYTE a = 255;
-			BYTE b = 1;
-			int  c = 10;
-			BYTE r;
-
-			r = a + b;
-			r = a + c;
-			r = b + c;
 		}
 	}
 
@@ -217,9 +205,6 @@ void CImageProcessingDoc::OnProcessMosaic()
 		DlgMosaicOption dlg;
 
 		if (dlg.DoModal() == IDOK) {
-			// write your own code
-			// for applying your effect, you must use m_pImage
-			// this code is a simple example for manufacturing image : grayscaling
 
 			DWORD dwWindowSize = dlg.m_dwWindowSize;
 
@@ -228,15 +213,34 @@ void CImageProcessingDoc::OnProcessMosaic()
 			RGBQUAD color;
 			RGBQUAD newcolor;
 
-			for (DWORD y = 0; y < height; y++) {
-				for (DWORD x = 0; x < width; x++) {
-					color = m_pImage->GetPixelColor(x, y);
+			for (DWORD blockY = 0; blockY < height; blockY += dwWindowSize) {
+				for (DWORD blockX = 0; blockX < width; blockX += dwWindowSize) {
 
-					newcolor.rgbBlue  = (BYTE)RGB2GRAY(color.rgbRed, color.rgbGreen, color.rgbBlue);
-					newcolor.rgbGreen = (BYTE)RGB2GRAY(color.rgbRed, color.rgbGreen, color.rgbBlue);
-					newcolor.rgbRed   = (BYTE)RGB2GRAY(color.rgbRed, color.rgbGreen, color.rgbBlue);
+					int totalRed = 0, totalGreen = 0, totalBlue = 0;
+					int pixelCount = 0;
 
-					m_pImage->SetPixelColor(x, y, newcolor);
+					DWORD endY = min(blockY + dwWindowSize, height);
+					DWORD endX = min(blockX + dwWindowSize, width);
+
+					for (DWORD y = blockY; y < endY; y++) {
+						for (DWORD x = blockX; x < endX; x++) {
+							color = m_pImage->GetPixelColor(x, y);
+							totalRed   += color.rgbRed;
+							totalGreen += color.rgbGreen;
+							totalBlue  += color.rgbBlue;
+							pixelCount++;
+						}
+					}
+
+					newcolor.rgbRed   = (BYTE)(totalRed   / pixelCount);
+					newcolor.rgbGreen = (BYTE)(totalGreen / pixelCount);
+					newcolor.rgbBlue  = (BYTE)(totalBlue  / pixelCount);
+
+					for (DWORD y = blockY; y < endY; y++) {
+						for (DWORD x = blockX; x < endX; x++) {
+							m_pImage->SetPixelColor(x, y, newcolor);
+						}
+					}
 				}
 			}
 		}
@@ -362,7 +366,7 @@ void CImageProcessingDoc::OnProcessContrastStretch()
 void CImageProcessingDoc::OnProcessEqualization()
 {
 	// TODO: Add a Histogram equalization code here
-	if (m_pImage) 
+	if (m_pImage)
 	{
 
 		DWORD width = m_pImage->GetWidth();
@@ -370,7 +374,7 @@ void CImageProcessingDoc::OnProcessEqualization()
 		RGBQUAD color;	// Save the current color value
 		RGBQUAD newcolor;	// After the conversion, save the color value
 
-		//(1) Histogram has already been generated histogram(Omission) 
+		//(1) Histogram has already been generated histogram(Omission)
 		//(2) Create a cumulative histogram
 		DWORD sum = 0;
 		float scale_factor = 255.0 / (width*height);
@@ -388,15 +392,15 @@ void CImageProcessingDoc::OnProcessEqualization()
 
 		for(int i=0; i<256 ; i++)
 		{
-		// (Coding)  
+		// (Coding)
 
 
 		}
 
 		// (4) Image Conversion
-		for (DWORD y = 0; y < height; y++) 
+		for (DWORD y = 0; y < height; y++)
 		{
-			for (DWORD x = 0; x < width; x++) 
+			for (DWORD x = 0; x < width; x++)
 			{
 				color = m_pImage->GetPixelColor(x, y);
 				// (Coding)
@@ -405,7 +409,7 @@ void CImageProcessingDoc::OnProcessEqualization()
 
 				m_pImage->SetPixelColor(x, y, newcolor);
 			}
-		}		
+		}
 	}
 
 	CalculateHistogram();
@@ -417,7 +421,7 @@ void CImageProcessingDoc::OnProcessEqualization()
 void CImageProcessingDoc::OnHistogramSpecification()
 {
 	// TODO: Add a Histogram specifications code here
-	if (m_pImage) 
+	if (m_pImage)
 	{
 
 		DWORD width = m_pImage->GetWidth();
@@ -425,7 +429,7 @@ void CImageProcessingDoc::OnHistogramSpecification()
 		RGBQUAD color;	// Save the current color value
 		RGBQUAD newcolor;	// After the conversion, save the color value
 
-		//(1) Histogram has already been generated histogram(Omission) 
+		//(1) Histogram has already been generated histogram(Omission)
 		//(2) Create a cumulative histogram
 		DWORD sum = 0;
 		float scale_factor = 255.0 / (width*height);
@@ -443,7 +447,7 @@ void CImageProcessingDoc::OnHistogramSpecification()
 
 		for(int i=0; i<256 ; i++)
 		{
-		// (coding)  
+		// (coding)
 
 
 		}
@@ -454,7 +458,7 @@ void CImageProcessingDoc::OnHistogramSpecification()
 		// modifing to be entered in the real number on calculating sum_hist
 
 
-		//(4) 
+		//(4)
 		DWORD desired_histogram[256];
 		// Making desired_histogram
 /*
@@ -472,7 +476,7 @@ void CImageProcessingDoc::OnHistogramSpecification()
 		}
 */
 /*
-		//3.		
+		//3.
 		for (int i=0; i<=127; i++)
 		{
 			desired_histogram[i]=127-i;
@@ -518,13 +522,13 @@ void CImageProcessingDoc::OnHistogramSpecification()
 		//(coding)
 
 		}
-		
-		
+
+
 
 		// (8) Image Conversion
-		for (DWORD y = 0; y < height; y++) 
+		for (DWORD y = 0; y < height; y++)
 		{
-			for (DWORD x = 0; x < width; x++) 
+			for (DWORD x = 0; x < width; x++)
 			{
 				color = m_pImage->GetPixelColor(x, y);
 				// (coding)
@@ -533,12 +537,12 @@ void CImageProcessingDoc::OnHistogramSpecification()
 
 				m_pImage->SetPixelColor(x, y, newcolor);
 			}
-		}		
+		}
 	} // if(m_pImage)
 
 	CalculateHistogram();
 	UpdateAllViews(NULL);
 
-	
+
 
 }
