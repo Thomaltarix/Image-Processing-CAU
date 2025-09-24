@@ -1,0 +1,6 @@
+cximage/*
+sample image/*
+TestCxImage/*
+*.sdf
+*.ipch
+*.db
