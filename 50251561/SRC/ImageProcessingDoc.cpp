@@ -277,16 +277,17 @@ void CImageProcessingDoc::OnProcessComposite()
 					firstColor = m_pImage->GetPixelColor(x, y);
 					secondColor = pSecondImage->GetPixelColor(x, y);
 
-					if (nOperatorID == 0)// Add
-						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return a + b; });
-					else if (nOperatorID == 1) // Subtract
-						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return a - b; });
-					else if (nOperatorID == 2) // Multiply
-						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return a * b; });
-					else if (nOperatorID == 3) // Divide
-						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return b == 0 ? 255 : a / b; });
-					else // Error
-						newColor = firstColor;
+					// Define an array of lambda functions for each operation
+					static const auto compositeOps = {
+						[](int a, int b) { return a + b; },                       // Add
+						[](int a, int b) { return a - b; },                       // Subtract
+						[](int a, int b) { return a * b; },                       // Multiply
+						[](int a, int b) { return b == 0 ? 255 : a / b; },        // Divide
+						[](int a, int b) { return a; }                            // Default/Error
+					};
+
+					auto op = (nOperatorID >= 0 && nOperatorID < 4) ? std::next(compositeOps.begin(), nOperatorID) : std::next(compositeOps.begin(), 4);
+					newColor = modifyColor(firstColor, secondColor, *op);
 
 					m_pImage->SetPixelColor(x, y, newColor);
 				}
