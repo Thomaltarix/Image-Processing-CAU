@@ -32,6 +32,19 @@ BEGIN_MESSAGE_MAP(CImageProcessingDoc, CDocument)
 	ON_COMMAND(ID_32783, &CImageProcessingDoc::OnHistogramSpecification)
 END_MESSAGE_MAP()
 
+static BYTE avoidBoundaries(int value)
+{
+	return max(0, min(255, value));
+}
+
+static RGBQUAD modifyColor(RGBQUAD c1, RGBQUAD c2, int (*operation)(int, int))
+{
+	RGBQUAD result;
+	result.rgbRed   = avoidBoundaries(operation((int)c1.rgbRed, (int)c2.rgbRed));
+	result.rgbGreen = avoidBoundaries(operation((int)c1.rgbGreen, (int)c2.rgbGreen));
+	result.rgbBlue  = avoidBoundaries(operation((int)c1.rgbBlue, (int)c2.rgbBlue));
+	return result;
+}
 
 // CImageProcessingDoc Contruction/Destuction
 
@@ -71,9 +84,6 @@ BOOL CImageProcessingDoc::OnNewDocument()
 
 	return TRUE;
 }
-
-
-
 
 // CImageProcessingDoc serialization
 
@@ -184,10 +194,7 @@ void CImageProcessingDoc::OnProcessBrightness()
 					color = m_pImage->GetPixelColor(x, y);
 
 					const int modify = byModifyValue * (nPlusMinus == 0 ? 1 : -1);
-					newcolor.rgbRed   = (BYTE)max(0, min(255, (int)color.rgbRed   + modify));
-					newcolor.rgbGreen = (BYTE)max(0, min(255, (int)color.rgbGreen + modify));
-					newcolor.rgbBlue  = (BYTE)max(0, min(255, (int)color.rgbBlue  + modify));
-
+					newcolor = modifyColor(color, color, [](int a, int b) { return a + b; });
 					m_pImage->SetPixelColor(x, y, newcolor);
 				}
 			}
@@ -252,7 +259,6 @@ void CImageProcessingDoc::OnProcessMosaic()
 
 void CImageProcessingDoc::OnProcessComposite()
 {
-	// TODO: Add a composite code here
 	if (m_pImage) {
 		DlgCompositeOption dlg;
 
@@ -271,9 +277,16 @@ void CImageProcessingDoc::OnProcessComposite()
 					firstColor = m_pImage->GetPixelColor(x, y);
 					secondColor = pSecondImage->GetPixelColor(x, y);
 
-					newColor.rgbBlue  = (BYTE)RGB2GRAY(secondColor.rgbRed, secondColor.rgbGreen, secondColor.rgbBlue);
-					newColor.rgbGreen = (BYTE)RGB2GRAY(secondColor.rgbRed, secondColor.rgbGreen, secondColor.rgbBlue);
-					newColor.rgbRed   = (BYTE)RGB2GRAY(secondColor.rgbRed, secondColor.rgbGreen, secondColor.rgbBlue);
+					if (nOperatorID == 0)// Add
+						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return a + b; });
+					else if (nOperatorID == 1) // Subtract
+						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return a - b; });
+					else if (nOperatorID == 2) // Multiply
+						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return a * b; });
+					else if (nOperatorID == 3) // Divide
+						newColor = modifyColor(firstColor, secondColor, [](int a, int b) { return b == 0 ? 255 : a / b; });
+					else // Error
+						newColor = firstColor;
 
 					m_pImage->SetPixelColor(x, y, newColor);
 				}
