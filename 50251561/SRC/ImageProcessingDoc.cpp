@@ -37,7 +37,7 @@ static BYTE avoidBoundaries(int value)
 	return max(0, min(255, value));
 }
 
-static RGBQUAD modifyColor(RGBQUAD c1, RGBQUAD c2, int (*operation)(int, int))
+static RGBQUAD modifyColor(RGBQUAD c1, RGBQUAD c2, std::function<int(int, int)> operation)
 {
 	RGBQUAD result;
 	result.rgbRed   = avoidBoundaries(operation((int)c1.rgbRed, (int)c2.rgbRed));
@@ -272,23 +272,25 @@ void CImageProcessingDoc::OnProcessComposite()
 			RGBQUAD secondColor;
 			RGBQUAD newColor;
 
+			// Define an array of lambda functions for each operation
+			std::function<int(int, int)> compositeOps[] = {
+				[](int a, int b) { return a + b; },                       // Add
+				[](int a, int b) { return a - b; },                       // Subtract
+				[](int a, int b) { return (a * b) / 255; },               // Multiply
+				[](int a, int b) { return b == 0 ? 255 : (a * 255) / b; }, // Divide
+				[](int a, int b) { return a; }                            // Default/Error
+			};
+
+			// Select the appropriate operation (with bounds checking)
+			int opIndex = (nOperatorID >= 0 && nOperatorID < 4) ? nOperatorID : 4;
+
 			for (DWORD y = 0; y < height; y++) {
 				for (DWORD x = 0; x < width; x++) {
 					firstColor = m_pImage->GetPixelColor(x, y);
 					secondColor = pSecondImage->GetPixelColor(x, y);
 
-					// Define an array of lambda functions for each operation
-					static const auto compositeOps = {
-						[](int a, int b) { return a + b; },                       // Add
-						[](int a, int b) { return a - b; },                       // Subtract
-						[](int a, int b) { return a * b; },                       // Multiply
-						[](int a, int b) { return b == 0 ? 255 : a / b; },        // Divide
-						[](int a, int b) { return a; }                            // Default/Error
-					};
-
-					auto op = (nOperatorID >= 0 && nOperatorID < 4) ? std::next(compositeOps.begin(), nOperatorID) : std::next(compositeOps.begin(), 4);
-					newColor = modifyColor(firstColor, secondColor, *op);
-
+					// Apply the selected operation to each color channel
+					newColor = modifyColor(firstColor, secondColor, compositeOps[opIndex]);
 					m_pImage->SetPixelColor(x, y, newColor);
 				}
 			}
